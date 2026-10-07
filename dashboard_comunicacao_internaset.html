@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Central de Comunicação Interna · GCIE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Text:wght@500;700;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg-0:#0B1220;
+    --bg-1:#12203A;
+    --bg-panel: rgba(255,255,255,0.035);
+    --bg-panel-hover: rgba(255,255,255,0.06);
+    --line: rgba(255,255,255,0.09);
+    --text-hi:#EDEFF3;
+    --text-mid:#AEB8CC;
+    --text-lo:#7C8AA3;
+    --amber:#F2A93B;
+    --teal:#35C4B0;
+    --coral:#E8604C;
+    --violet:#9086EA;
+    --blue:#4C8DF2;
+    --amber-glow: rgba(242,169,59,0.35);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 700px at 85% -10%, rgba(76,141,242,0.14), transparent 60%),
+      radial-gradient(900px 500px at 10% 0%, rgba(242,169,59,0.10), transparent 55%),
+      var(--bg-0);
+    color:var(--text-hi);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  ::selection{background:var(--amber); color:#1a1a1a;}
+  .wrap{max-width:1320px; margin:0 auto; padding:28px 28px 80px;}
+
+  /* ---------- HEADER ---------- */
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding-bottom:22px; margin-bottom:26px; border-bottom:1px solid var(--line);
+    flex-wrap:wrap; gap:16px;
+  }
+  .brand{display:flex; align-items:center; gap:14px;}
+  .live-dot{
+    width:11px; height:11px; border-radius:50%;
+    background:var(--amber);
+    box-shadow:0 0 0 0 var(--amber-glow);
+    animation: pulse 2s infinite;
+    flex-shrink:0;
+  }
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 var(--amber-glow);}
+    70%{box-shadow:0 0 0 9px rgba(242,169,59,0);}
+    100%{box-shadow:0 0 0 0 rgba(242,169,59,0);}
+  }
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.16em;
+    color:var(--amber); text-transform:uppercase; font-weight:700;
+  }
+  h1{
+    font-family:'Big Shoulders Text',sans-serif; font-weight:900;
+    font-size:44px; line-height:0.95; margin:4px 0 0; letter-spacing:0.2px;
+    color:var(--text-hi);
+  }
+  .sub{color:var(--text-mid); font-size:13.5px; margin-top:6px;}
+  .sub b{color:var(--text-hi); font-weight:600;}
+  .clock{
+    font-family:'JetBrains Mono',monospace; text-align:right; color:var(--text-lo); font-size:12px;
+  }
+  .clock .period{
+    font-size:20px; color:var(--text-hi); font-weight:500; letter-spacing:0.02em;
+  }
+
+  /* ---------- FILTERS ---------- */
+  .filters{
+    display:flex; align-items:center; gap:22px; flex-wrap:wrap;
+    background:var(--bg-panel); border:1px solid var(--line); border-radius:14px;
+    padding:16px 20px; margin-bottom:28px;
+  }
+  .filter-group{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+  .filter-label{
+    font-family:'JetBrains Mono',monospace; font-size:10.5px; text-transform:uppercase;
+    letter-spacing:0.1em; color:var(--text-lo); margin-right:2px; white-space:nowrap;
+  }
+  .chip{
+    font-family:'Inter',sans-serif; font-size:12.5px; font-weight:600;
+    padding:6px 13px; border-radius:100px; border:1px solid var(--line);
+    background:transparent; color:var(--text-mid); cursor:pointer;
+    transition:all .15s ease; user-select:none;
+  }
+  .chip:hover{background:var(--bg-panel-hover); color:var(--text-hi);}
+  .chip.active{
+    background:var(--amber); border-color:var(--amber); color:#1a1408; font-weight:700;
+  }
+  .chip.active[data-inst="SESI"]{background:var(--teal); border-color:var(--teal); color:#06231f;}
+  .chip.active[data-inst="SENAI"]{background:var(--coral); border-color:var(--coral); color:#2a0c06;}
+  .chip.active[data-inst="IEL"]{background:var(--violet); border-color:var(--violet); color:#18123f;}
+  .chip.active[data-inst="Sistema Indústria"]{background:var(--blue); border-color:var(--blue); color:#081733;}
+  .divider-v{width:1px; height:22px; background:var(--line);}
+
+  /* ---------- TIMELINE / BRUSH ---------- */
+  .timeline-panel{margin-bottom:22px;}
+  #chartTimeline{cursor:crosshair;}
+  .timeline-foot{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    margin-top:10px; flex-wrap:wrap;
+  }
+  .timeline-hint{font-size:12px; color:var(--text-lo); font-style:italic;}
+  #btnResetTimeline{font-size:11.5px; padding:5px 12px;}
+
+  /* ---------- KPIs ---------- */
+  .kpi-hero{
+    background:linear-gradient(135deg, rgba(242,169,59,0.10), rgba(255,255,255,0.03));
+    border:1px solid rgba(242,169,59,0.35); border-radius:18px;
+    padding:26px 30px; margin-bottom:16px; position:relative; overflow:hidden;
+    display:flex; align-items:baseline; gap:18px; flex-wrap:wrap;
+  }
+  .kpi-hero::before{
+    content:""; position:absolute; top:0; left:0; width:4px; height:100%; background:var(--amber);
+  }
+  .kpi-hero-label{
+    font-family:'JetBrains Mono',monospace; font-size:12px; text-transform:uppercase;
+    letter-spacing:0.12em; color:var(--amber); font-weight:700;
+  }
+  .kpi-hero-value{
+    font-family:'Big Shoulders Text',sans-serif; font-size:64px; font-weight:900; line-height:1;
+    color:var(--text-hi); letter-spacing:0.2px;
+  }
+  .kpi-hero-unit{
+    font-family:'Inter',sans-serif; font-size:15px; color:var(--text-mid); font-weight:500;
+  }
+  .kpi-row{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:28px;
+  }
+  .kpi{
+    background:var(--bg-panel); border:1px solid var(--line); border-radius:14px;
+    padding:20px 22px; position:relative; overflow:hidden;
+  }
+  .kpi::before{
+    content:""; position:absolute; top:0; left:0; width:3px; height:100%; background:var(--accent,var(--amber));
+  }
+  .kpi-label{font-size:11.5px; color:var(--text-lo); text-transform:uppercase; letter-spacing:0.08em; font-weight:600;}
+  .kpi-value{
+    font-family:'JetBrains Mono',monospace; font-size:28px; font-weight:700; margin-top:8px; color:var(--text-hi);
+  }
+  .kpi-value span{font-size:14px; color:var(--text-mid); font-weight:500; margin-left:4px;}
+  .kpi-value--text{font-family:'Inter',sans-serif; font-size:21px; font-weight:700; line-height:1.2;}
+  .kpi-delta{font-size:12px; margin-top:6px; color:var(--text-mid);}
+  .kpi-delta.up{color:var(--teal);}
+  .kpi-delta.down{color:var(--coral);}
+
+  /* ---------- PANELS ---------- */
+  .grid-2{display:grid; grid-template-columns:1.4fr 1fr; gap:18px; margin-bottom:18px;}
+  .grid-2b{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:18px;}
+  .panel{
+    background:var(--bg-panel); border:1px solid var(--line); border-radius:16px;
+    padding:22px 24px;
+  }
+  .panel-head{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:4px;}
+  .panel-title{
+    font-family:'Big Shoulders Text',sans-serif; font-weight:700; font-size:21px; letter-spacing:0.2px;
+  }
+  .panel-note{font-size:11.5px; color:var(--text-lo); font-family:'JetBrains Mono',monospace;}
+  .chart-box{margin-top:14px; position:relative;}
+
+  /* ---------- EQUALIZER (signature element) ---------- */
+  .eq-panel{margin-bottom:18px;}
+  .eq-groups{
+    display:flex; align-items:stretch; gap:0; margin-top:22px;
+  }
+  .eq-group{
+    flex:1; display:flex; flex-direction:column; min-width:0;
+  }
+  .eq-group + .eq-group{
+    border-left:1px solid var(--line); margin-left:20px; padding-left:20px;
+  }
+  .eq-group-head{
+    display:flex; align-items:center; gap:8px; margin-bottom:16px;
+  }
+  .eq-group-dot{width:8px; height:8px; border-radius:50%; flex-shrink:0;}
+  .eq-group-title{
+    font-family:'JetBrains Mono',monospace; font-size:10.5px; text-transform:uppercase;
+    letter-spacing:0.1em; font-weight:700; color:var(--text-mid);
+  }
+  .eq-group-total{
+    margin-left:auto; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-lo);
+  }
+  .eq-bars{
+    display:flex; align-items:flex-end; gap:8px; height:170px;
+  }
+  .eq-bar-col{flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; height:100%; justify-content:flex-end;}
+  .eq-bar{
+    width:100%; max-width:44px; border-radius:6px 6px 3px 3px;
+    transition:height .6s cubic-bezier(.2,.8,.2,1), opacity .3s ease;
+    position:relative;
+  }
+  .eq-bar:hover{opacity:0.75;}
+  .eq-val{
+    font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--text-hi); font-weight:700;
+    margin-bottom:6px;
+  }
+  .eq-label{
+    font-size:10px; color:var(--text-lo); margin-top:10px; text-align:center; line-height:1.25;
+    max-width:74px;
+  }
+
+  /* ---------- PROJECTS ---------- */
+  .proj-list{display:flex; flex-direction:column; gap:10px; margin-top:16px;}
+  .proj-item{
+    display:flex; align-items:center; gap:12px;
+    background:rgba(255,255,255,0.02); border:1px solid var(--line); border-radius:10px;
+    padding:13px 16px;
+  }
+  .proj-dot{width:8px; height:8px; border-radius:50%; background:var(--teal); flex-shrink:0; box-shadow:0 0 8px var(--teal);}
+  .proj-text{font-size:13.5px; color:var(--text-mid); line-height:1.4;}
+  .proj-text b{color:var(--text-hi); font-weight:600;}
+  .proj-tag{
+    margin-left:auto; font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase;
+    color:var(--teal); border:1px solid rgba(53,196,176,0.4); border-radius:100px; padding:3px 9px; white-space:nowrap;
+  }
+
+  footer{
+    margin-top:34px; padding-top:18px; border-top:1px solid var(--line);
+    display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;
+    font-size:11.5px; color:var(--text-lo); font-family:'JetBrains Mono',monospace;
+  }
+
+  @media (max-width:980px){
+    .kpi-row{grid-template-columns:repeat(2,1fr);}
+    .kpi-hero-value{font-size:44px;}
+    .grid-2, .grid-2b{grid-template-columns:1fr;}
+    h1{font-size:32px;}
+    .eq-groups{flex-direction:column; gap:22px;}
+    .eq-group + .eq-group{border-left:none; margin-left:0; padding-left:0; border-top:1px solid var(--line); padding-top:18px;}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .live-dot{animation:none;}
+    .eq-bar{transition:none;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="brand">
+      <span class="live-dot"></span>
+      <div>
+        <div class="eyebrow">GCIE · Painel de Indicadores</div>
+        <h1>Central de Comunicação<br>Interna</h1>
+        <div class="sub">Rede de comunicação do <b>Sistema Indústria</b> — produção de conteúdo, publicações e estratégia</div>
+      </div>
+    </div>
+    <div class="clock">
+      <div>PERÍODO MONITORADO</div>
+      <div class="period">Jan – Set 2026</div>
+    </div>
+  </div>
+
+  <div class="filters">
+    <div class="filter-group">
+      <span class="filter-label">Instituição</span>
+      <button class="chip active" data-inst="CNI">CNI</button>
+      <button class="chip active" data-inst="SESI">SESI</button>
+      <button class="chip active" data-inst="SENAI">SENAI</button>
+      <button class="chip active" data-inst="IEL">IEL</button>
+      <button class="chip active" data-inst="Sistema Indústria">Sistema Indústria</button>
+    </div>
+    <div class="divider-v"></div>
+    <div class="filter-group">
+      <span class="filter-label">Mês</span>
+      <button class="chip active" data-mes="Janeiro">Jan</button>
+      <button class="chip active" data-mes="Fevereiro">Fev</button>
+      <button class="chip active" data-mes="Março">Mar</button>
+      <button class="chip active" data-mes="Abril">Abr</button>
+      <button class="chip active" data-mes="Maio">Mai</button>
+      <button class="chip active" data-mes="Junho">Jun</button>
+      <button class="chip active" data-mes="Julho">Jul</button>
+      <button class="chip active" data-mes="Agosto">Ago</button>
+      <button class="chip active" data-mes="Setembro">Set</button>
+    </div>
+  </div>
+
+  <div class="panel timeline-panel">
+    <div class="panel-head">
+      <div class="panel-title">Linha do Tempo</div>
+      <div class="panel-note" id="timelineRangeLabel">JAN — JUN · PERÍODO COMPLETO</div>
+    </div>
+    <div class="chart-box"><canvas id="chartTimeline" height="80"></canvas></div>
+    <div class="timeline-foot">
+      <span class="timeline-hint">Arraste sobre o gráfico para isolar um recorte de meses</span>
+      <button class="chip" id="btnResetTimeline">Ver período completo</button>
+    </div>
+  </div>
+
+  <div class="kpi-hero" id="kpiHero"></div>
+  <div class="kpi-row" id="kpiRow"></div>
+
+  <div class="panel eq-panel">
+    <div class="panel-head">
+      <div class="panel-title">Espectro de Canais</div>
+      <div class="panel-note">CADA FRENTE COM SEUS PRÓPRIOS CANAIS · ESCALA INDIVIDUAL POR GRUPO</div>
+    </div>
+    <div class="eq-groups" id="eqWrap"></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">Evolução Mensal por Frente</div>
+        <div class="panel-note">PRODUÇÃO · ESTRATÉGIA · PUBLICAÇÕES</div>
+      </div>
+      <div class="chart-box"><canvas id="chartEvol" height="105"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">Participação por Instituição</div>
+        <div class="panel-note">% DO VOLUME TOTAL</div>
+      </div>
+      <div class="chart-box"><canvas id="chartDonut" height="230"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid-2b">
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">Produção por Tipo de Conteúdo</div>
+        <div class="panel-note">TEXTOS · CRIATIVOS · VÍDEOS · ÁUDIOS · E-MAILS</div>
+      </div>
+      <div class="chart-box"><canvas id="chartProducao" height="220"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">Frente Estratégica</div>
+        <div class="panel-note">RELATÓRIOS · PLANEJAMENTO DE AÇÕES</div>
+      </div>
+      <div class="chart-box"><canvas id="chartEstrategia" height="220"></canvas></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-title">Projetos em Andamento</div>
+      <div class="panel-note">FRENTE DE COMUNICAÇÃO INTERNA</div>
+    </div>
+    <div class="proj-list" id="projList"></div>
+  </div>
+
+  <footer>
+    <span>Fonte: GCIE — 02_GCIE.xlsx · Aba "Com. interna"</span>
+    <span id="footRange">6 meses · 5 instituições selecionadas</span>
+  </footer>
+
+</div>
+
+<script>
+/* ---------------- DATA ---------------- */
+const RAW = [{"indicador": "Produção", "canal": "Textos", "mes": "Janeiro", "instituicao": "CNI", "qtd": 11}, {"indicador": "Produção", "canal": "Textos", "mes": "Janeiro", "instituicao": "IEL", "qtd": 4}, {"indicador": "Produção", "canal": "Textos", "mes": "Janeiro", "instituicao": "SESI", "qtd": 30}, {"indicador": "Produção", "canal": "Textos", "mes": "Janeiro", "instituicao": "SENAI", "qtd": 22}, {"indicador": "Produção", "canal": "Textos", "mes": "Janeiro", "instituicao": "Sistema Indústria", "qtd": 25}, {"indicador": "Produção", "canal": "Criativos", "mes": "Janeiro", "instituicao": "CNI", "qtd": 1}, {"indicador": "Produção", "canal": "Criativos", "mes": "Janeiro", "instituicao": "IEL", "qtd": 25}, {"indicador": "Produção", "canal": "Criativos", "mes": "Janeiro", "instituicao": "SESI", "qtd": 21}, {"indicador": "Produção", "canal": "Criativos", "mes": "Janeiro", "instituicao": "SENAI", "qtd": 38}, {"indicador": "Produção", "canal": "Criativos", "mes": "Janeiro", "instituicao": "Sistema Indústria", "qtd": 19}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Janeiro", "instituicao": "CNI", "qtd": 1}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Janeiro", "instituicao": "IEL", "qtd": 3}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Janeiro", "instituicao": "SESI", "qtd": 2}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Janeiro", "instituicao": "SENAI", "qtd": 6}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Janeiro", "instituicao": "Sistema Indústria", "qtd": 4}, {"indicador": "Produção", "canal": "Áudios", "mes": "Janeiro", "instituicao": "CNI", "qtd": 0}, {"indicador": "Produção", "canal": "Áudios", "mes": "Janeiro", "instituicao": "IEL", "qtd": 0}, {"indicador": "Produção", "canal": "Áudios", "mes": "Janeiro", "instituicao": "SESI", "qtd": 0}, {"indicador": "Produção", "canal": "Áudios", "mes": "Janeiro", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Produção", "canal": "Áudios", "mes": "Janeiro", "instituicao": "Sistema Indústria", "qtd": 0}, {"indicador": "Produção", "canal": "E-mails", "mes": "Janeiro", "instituicao": "CNI", "qtd": 3}, {"indicador": "Produção", "canal": "E-mails", "mes": "Janeiro", "instituicao": "IEL", "qtd": 1}, {"indicador": "Produção", "canal": "E-mails", "mes": "Janeiro", "instituicao": "SESI", "qtd": 3}, {"indicador": "Produção", "canal": "E-mails", "mes": "Janeiro", "instituicao": "SENAI", "qtd": 2}, {"indicador": "Produção", "canal": "E-mails", "mes": "Janeiro", "instituicao": "Sistema Indústria", "qtd": 7}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Janeiro", "instituicao": "CNI", "qtd": 0}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Janeiro", "instituicao": "IEL", "qtd": 0}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Janeiro", "instituicao": "SESI", "qtd": 0}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Janeiro", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Janeiro", "instituicao": "Sistema Indústria", "qtd": 1}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Janeiro", "instituicao": "CNI", "qtd": 4}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Janeiro", "instituicao": "IEL", "qtd": 1}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Janeiro", "instituicao": "SESI", "qtd": 3}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Janeiro", "instituicao": "SENAI", "qtd": 2}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Janeiro", "instituicao": "Sistema Indústria", "qtd": 3}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Janeiro", "instituicao": "CNI", "qtd": 2}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Janeiro", "instituicao": "IEL", "qtd": 2}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Janeiro", "instituicao": "SESI", "qtd": 5}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Janeiro", "instituicao": "SENAI", "qtd": 1}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Janeiro", "instituicao": "Sistema Indústria", "qtd": 8}, {"indicador": "Publicações", "canal": "Teams", "mes": "Janeiro", "instituicao": "CNI", "qtd": 0}, {"indicador": "Publicações", "canal": "Teams", "mes": "Janeiro", "instituicao": "IEL", "qtd": 1}, {"indicador": "Publicações", "canal": "Teams", "mes": "Janeiro", "instituicao": "SESI", "qtd": 4}, {"indicador": "Publicações", "canal": "Teams", "mes": "Janeiro", "instituicao": "SENAI", "qtd": 2}, {"indicador": "Publicações", "canal": "Teams", "mes": "Janeiro", "instituicao": "Sistema Indústria", "qtd": 3}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Janeiro", "instituicao": "CNI", "qtd": 1}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Janeiro", "instituicao": "IEL", "qtd": 22}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Janeiro", "instituicao": "SESI", "qtd": 4}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Janeiro", "instituicao": "SENAI", "qtd": 21}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Janeiro", "instituicao": "Sistema Indústria", "qtd": 9}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Janeiro", "instituicao": "CNI", "qtd": 0}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Janeiro", "instituicao": "IEL", "qtd": 0}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Janeiro", "instituicao": "SESI", "qtd": 0}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Janeiro", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Janeiro", "instituicao": "Sistema Indústria", "qtd": 7}, {"indicador": "Publicações", "canal": "WhatsApp", "mes": "Janeiro", "instituicao": "SESI", "qtd": 6}, {"indicador": "Publicações", "canal": "WhatsApp", "mes": "Janeiro", "instituicao": "SENAI", "qtd": 12}, {"indicador": "Publicações", "canal": "WhatsApp", "mes": "Janeiro", "instituicao": "Sistema Indústria", "qtd": 7}, {"indicador": "Publicações", "canal": "Agência de Notícias", "mes": "Janeiro", "instituicao": "SESI", "qtd": 0}, {"indicador": "Publicações", "canal": "Agência de Notícias", "mes": "Janeiro", "instituicao": "SENAI", "qtd": 1}, {"indicador": "Publicações", "canal": "Agência de Notícias", "mes": "Janeiro", "instituicao": "Sistema Indústria", "qtd": 0}, {"indicador": "Produção", "canal": "Textos", "mes": "Fevereiro", "instituicao": "CNI", "qtd": 10}, {"indicador": "Produção", "canal": "Textos", "mes": "Fevereiro", "instituicao": "IEL", "qtd": 0}, {"indicador": "Produção", "canal": "Textos", "mes": "Fevereiro", "instituicao": "SESI", "qtd": 25}, {"indicador": "Produção", "canal": "Textos", "mes": "Fevereiro", "instituicao": "SENAI", "qtd": 14}, {"indicador": "Produção", "canal": "Textos", "mes": "Fevereiro", "instituicao": "Sistema Indústria", "qtd": 39}, {"indicador": "Produção", "canal": "Criativos", "mes": "Fevereiro", "instituicao": "CNI", "qtd": 4}, {"indicador": "Produção", "canal": "Criativos", "mes": "Fevereiro", "instituicao": "IEL", "qtd": 0}, {"indicador": "Produção", "canal": "Criativos", "mes": "Fevereiro", "instituicao": "SESI", "qtd": 17}, {"indicador": "Produção", "canal": "Criativos", "mes": "Fevereiro", "instituicao": "SENAI", "qtd": 2}, {"indicador": "Produção", "canal": "Criativos", "mes": "Fevereiro", "instituicao": "Sistema Indústria", "qtd": 27}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Fevereiro", "instituicao": "CNI", "qtd": 2}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Fevereiro", "instituicao": "IEL", "qtd": 0}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Fevereiro", "instituicao": "SESI", "qtd": 4}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Fevereiro", "instituicao": "SENAI", "qtd": 2}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Fevereiro", "instituicao": "Sistema Indústria", "qtd": 1}, {"indicador": "Produção", "canal": "Áudios", "mes": "Fevereiro", "instituicao": "CNI", "qtd": 0}, {"indicador": "Produção", "canal": "Áudios", "mes": "Fevereiro", "instituicao": "IEL", "qtd": 0}, {"indicador": "Produção", "canal": "Áudios", "mes": "Fevereiro", "instituicao": "SESI", "qtd": 0}, {"indicador": "Produção", "canal": "Áudios", "mes": "Fevereiro", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Produção", "canal": "Áudios", "mes": "Fevereiro", "instituicao": "Sistema Indústria", "qtd": 0}, {"indicador": "Produção", "canal": "E-mails", "mes": "Fevereiro", "instituicao": "CNI", "qtd": 6}, {"indicador": "Produção", "canal": "E-mails", "mes": "Fevereiro", "instituicao": "IEL", "qtd": 0}, {"indicador": "Produção", "canal": "E-mails", "mes": "Fevereiro", "instituicao": "SESI", "qtd": 5}, {"indicador": "Produção", "canal": "E-mails", "mes": "Fevereiro", "instituicao": "SENAI", "qtd": 3}, {"indicador": "Produção", "canal": "E-mails", "mes": "Fevereiro", "instituicao": "Sistema Indústria", "qtd": 5}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Fevereiro", "instituicao": "CNI", "qtd": 0}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Fevereiro", "instituicao": "IEL", "qtd": 1}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Fevereiro", "instituicao": "SESI", "qtd": 1}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Fevereiro", "instituicao": "SENAI", "qtd": 1}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Fevereiro", "instituicao": "Sistema Indústria", "qtd": 2}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Fevereiro", "instituicao": "CNI", "qtd": 1}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Fevereiro", "instituicao": "IEL", "qtd": 0}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Fevereiro", "instituicao": "SESI", "qtd": 4}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Fevereiro", "instituicao": "SENAI", "qtd": 1}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Fevereiro", "instituicao": "Sistema Indústria", "qtd": 3}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Fevereiro", "instituicao": "CNI", "qtd": 0}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Fevereiro", "instituicao": "IEL", "qtd": 0}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Fevereiro", "instituicao": "SESI", "qtd": 4}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Fevereiro", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Fevereiro", "instituicao": "Sistema Indústria", "qtd": 7}, {"indicador": "Publicações", "canal": "Teams", "mes": "Fevereiro", "instituicao": "CNI", "qtd": 0}, {"indicador": "Publicações", "canal": "Teams", "mes": "Fevereiro", "instituicao": "IEL", "qtd": 0}, {"indicador": "Publicações", "canal": "Teams", "mes": "Fevereiro", "instituicao": "SESI", "qtd": 2}, {"indicador": "Publicações", "canal": "Teams", "mes": "Fevereiro", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Publicações", "canal": "Teams", "mes": "Fevereiro", "instituicao": "Sistema Indústria", "qtd": 2}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Fevereiro", "instituicao": "CNI", "qtd": 7}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Fevereiro", "instituicao": "IEL", "qtd": 0}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Fevereiro", "instituicao": "SESI", "qtd": 4}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Fevereiro", "instituicao": "SENAI", "qtd": 3}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Fevereiro", "instituicao": "Sistema Indústria", "qtd": 10}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Fevereiro", "instituicao": "CNI", "qtd": 0}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Fevereiro", "instituicao": "IEL", "qtd": 0}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Fevereiro", "instituicao": "SESI", "qtd": 1}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Fevereiro", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Fevereiro", "instituicao": "Sistema Indústria", "qtd": 6}, {"indicador": "Publicações", "canal": "WhatsApp", "mes": "Fevereiro", "instituicao": "SESI", "qtd": 12}, {"indicador": "Publicações", "canal": "WhatsApp", "mes": "Fevereiro", "instituicao": "SENAI", "qtd": 8}, {"indicador": "Publicações", "canal": "WhatsApp", "mes": "Fevereiro", "instituicao": "Sistema Indústria", "qtd": 1}, {"indicador": "Publicações", "canal": "Agência de Notícias", "mes": "Fevereiro", "instituicao": "SESI", "qtd": 0}, {"indicador": "Publicações", "canal": "Agência de Notícias", "mes": "Fevereiro", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Publicações", "canal": "Agência de Notícias", "mes": "Fevereiro", "instituicao": "Sistema Indústria", "qtd": 0}, {"indicador": "Produção", "canal": "Textos", "mes": "Março", "instituicao": "CNI", "qtd": 1}, {"indicador": "Produção", "canal": "Textos", "mes": "Março", "instituicao": "IEL", "qtd": 3}, {"indicador": "Produção", "canal": "Textos", "mes": "Março", "instituicao": "SESI", "qtd": 50}, {"indicador": "Produção", "canal": "Textos", "mes": "Março", "instituicao": "SENAI", "qtd": 17}, {"indicador": "Produção", "canal": "Textos", "mes": "Março", "instituicao": "Sistema Indústria", "qtd": 65}, {"indicador": "Produção", "canal": "Criativos", "mes": "Março", "instituicao": "CNI", "qtd": 1}, {"indicador": "Produção", "canal": "Criativos", "mes": "Março", "instituicao": "IEL", "qtd": 1}, {"indicador": "Produção", "canal": "Criativos", "mes": "Março", "instituicao": "SESI", "qtd": 18}, {"indicador": "Produção", "canal": "Criativos", "mes": "Março", "instituicao": "SENAI", "qtd": 13}, {"indicador": "Produção", "canal": "Criativos", "mes": "Março", "instituicao": "Sistema Indústria", "qtd": 42}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Março", "instituicao": "CNI", "qtd": 1}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Março", "instituicao": "IEL", "qtd": 0}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Março", "instituicao": "SESI", "qtd": 20}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Março", "instituicao": "SENAI", "qtd": 1}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Março", "instituicao": "Sistema Indústria", "qtd": 6}, {"indicador": "Produção", "canal": "Áudios", "mes": "Março", "instituicao": "CNI", "qtd": 0}, {"indicador": "Produção", "canal": "Áudios", "mes": "Março", "instituicao": "IEL", "qtd": 0}, {"indicador": "Produção", "canal": "Áudios", "mes": "Março", "instituicao": "SESI", "qtd": 0}, {"indicador": "Produção", "canal": "Áudios", "mes": "Março", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Produção", "canal": "Áudios", "mes": "Março", "instituicao": "Sistema Indústria", "qtd": 0}, {"indicador": "Produção", "canal": "E-mails", "mes": "Março", "instituicao": "CNI", "qtd": 4}, {"indicador": "Produção", "canal": "E-mails", "mes": "Março", "instituicao": "IEL", "qtd": 0}, {"indicador": "Produção", "canal": "E-mails", "mes": "Março", "instituicao": "SESI", "qtd": 12}, {"indicador": "Produção", "canal": "E-mails", "mes": "Março", "instituicao": "SENAI", "qtd": 1}, {"indicador": "Produção", "canal": "E-mails", "mes": "Março", "instituicao": "Sistema Indústria", "qtd": 9}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Março", "instituicao": "CNI", "qtd": 1}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Março", "instituicao": "IEL", "qtd": 0}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Março", "instituicao": "SESI", "qtd": 3}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Março", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Março", "instituicao": "Sistema Indústria", "qtd": 3}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Março", "instituicao": "CNI", "qtd": 1}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Março", "instituicao": "IEL", "qtd": 0}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Março", "instituicao": "SESI", "qtd": 5}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Março", "instituicao": "SENAI", "qtd": 1}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Março", "instituicao": "Sistema Indústria", "qtd": 8}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Março", "instituicao": "CNI", "qtd": 0}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Março", "instituicao": "IEL", "qtd": 0}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Março", "instituicao": "SESI", "qtd": 4}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Março", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Março", "instituicao": "Sistema Indústria", "qtd": 17}, {"indicador": "Publicações", "canal": "Teams", "mes": "Março", "instituicao": "CNI", "qtd": 0}, {"indicador": "Publicações", "canal": "Teams", "mes": "Março", "instituicao": "IEL", "qtd": 0}, {"indicador": "Publicações", "canal": "Teams", "mes": "Março", "instituicao": "SESI", "qtd": 3}, {"indicador": "Publicações", "canal": "Teams", "mes": "Março", "instituicao": "SENAI", "qtd": 2}, {"indicador": "Publicações", "canal": "Teams", "mes": "Março", "instituicao": "Sistema Indústria", "qtd": 7}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Março", "instituicao": "CNI", "qtd": 4}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Março", "instituicao": "IEL", "qtd": 0}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Março", "instituicao": "SESI", "qtd": 7}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Março", "instituicao": "SENAI", "qtd": 2}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Março", "instituicao": "Sistema Indústria", "qtd": 15}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Março", "instituicao": "CNI", "qtd": 1}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Março", "instituicao": "IEL", "qtd": 0}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Março", "instituicao": "SESI", "qtd": 0}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Março", "instituicao": "SENAI", "qtd": 3}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Março", "instituicao": "Sistema Indústria", "qtd": 11}, {"indicador": "Publicações", "canal": "WhatsApp", "mes": "Março", "instituicao": "SESI", "qtd": 23}, {"indicador": "Publicações", "canal": "WhatsApp", "mes": "Março", "instituicao": "SENAI", "qtd": 9}, {"indicador": "Publicações", "canal": "WhatsApp", "mes": "Março", "instituicao": "Sistema Indústria", "qtd": 4}, {"indicador": "Publicações", "canal": "Agência de Notícias", "mes": "Março", "instituicao": "SESI", "qtd": 0}, {"indicador": "Publicações", "canal": "Agência de Notícias", "mes": "Março", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Publicações", "canal": "Agência de Notícias", "mes": "Março", "instituicao": "Sistema Indústria", "qtd": 0}, {"indicador": "Produção", "canal": "Textos", "mes": "Abril", "instituicao": "CNI", "qtd": 10}, {"indicador": "Produção", "canal": "Textos", "mes": "Abril", "instituicao": "IEL", "qtd": 2}, {"indicador": "Produção", "canal": "Textos", "mes": "Abril", "instituicao": "SESI", "qtd": 13}, {"indicador": "Produção", "canal": "Textos", "mes": "Abril", "instituicao": "SENAI", "qtd": 9}, {"indicador": "Produção", "canal": "Textos", "mes": "Abril", "instituicao": "Sistema Indústria", "qtd": 75}, {"indicador": "Produção", "canal": "Criativos", "mes": "Abril", "instituicao": "CNI", "qtd": 1}, {"indicador": "Produção", "canal": "Criativos", "mes": "Abril", "instituicao": "IEL", "qtd": 0}, {"indicador": "Produção", "canal": "Criativos", "mes": "Abril", "instituicao": "SESI", "qtd": 3}, {"indicador": "Produção", "canal": "Criativos", "mes": "Abril", "instituicao": "SENAI", "qtd": 1}, {"indicador": "Produção", "canal": "Criativos", "mes": "Abril", "instituicao": "Sistema Indústria", "qtd": 68}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Abril", "instituicao": "CNI", "qtd": 0}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Abril", "instituicao": "IEL", "qtd": 0}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Abril", "instituicao": "SESI", "qtd": 1}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Abril", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Abril", "instituicao": "Sistema Indústria", "qtd": 9}, {"indicador": "Produção", "canal": "Áudios", "mes": "Abril", "instituicao": "CNI", "qtd": 0}, {"indicador": "Produção", "canal": "Áudios", "mes": "Abril", "instituicao": "IEL", "qtd": 0}, {"indicador": "Produção", "canal": "Áudios", "mes": "Abril", "instituicao": "SESI", "qtd": 0}, {"indicador": "Produção", "canal": "Áudios", "mes": "Abril", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Produção", "canal": "Áudios", "mes": "Abril", "instituicao": "Sistema Indústria", "qtd": 0}, {"indicador": "Produção", "canal": "E-mails", "mes": "Abril", "instituicao": "CNI", "qtd": 9}, {"indicador": "Produção", "canal": "E-mails", "mes": "Abril", "instituicao": "IEL", "qtd": 0}, {"indicador": "Produção", "canal": "E-mails", "mes": "Abril", "instituicao": "SESI", "qtd": 0}, {"indicador": "Produção", "canal": "E-mails", "mes": "Abril", "instituicao": "SENAI", "qtd": 1}, {"indicador": "Produção", "canal": "E-mails", "mes": "Abril", "instituicao": "Sistema Indústria", "qtd": 6}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Abril", "instituicao": "CNI", "qtd": 0}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Abril", "instituicao": "IEL", "qtd": 0}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Abril", "instituicao": "SESI", "qtd": 0}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Abril", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Abril", "instituicao": "Sistema Indústria", "qtd": 1}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Abril", "instituicao": "CNI", "qtd": 0}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Abril", "instituicao": "IEL", "qtd": 0}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Abril", "instituicao": "SESI", "qtd": 6}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Abril", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Abril", "instituicao": "Sistema Indústria", "qtd": 4}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Abril", "instituicao": "CNI", "qtd": 0}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Abril", "instituicao": "IEL", "qtd": 0}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Abril", "instituicao": "SESI", "qtd": 1}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Abril", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Abril", "instituicao": "Sistema Indústria", "qtd": 10}, {"indicador": "Publicações", "canal": "Teams", "mes": "Abril", "instituicao": "CNI", "qtd": 1}, {"indicador": "Publicações", "canal": "Teams", "mes": "Abril", "instituicao": "IEL", "qtd": 0}, {"indicador": "Publicações", "canal": "Teams", "mes": "Abril", "instituicao": "SESI", "qtd": 1}, {"indicador": "Publicações", "canal": "Teams", "mes": "Abril", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Publicações", "canal": "Teams", "mes": "Abril", "instituicao": "Sistema Indústria", "qtd": 12}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Abril", "instituicao": "CNI", "qtd": 1}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Abril", "instituicao": "IEL", "qtd": 0}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Abril", "instituicao": "SESI", "qtd": 1}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Abril", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Abril", "instituicao": "Sistema Indústria", "qtd": 21}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Abril", "instituicao": "CNI", "qtd": 0}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Abril", "instituicao": "IEL", "qtd": 0}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Abril", "instituicao": "SESI", "qtd": 0}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Abril", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Abril", "instituicao": "Sistema Indústria", "qtd": 11}, {"indicador": "Publicações", "canal": "WhatsApp", "mes": "Abril", "instituicao": "SESI", "qtd": 8}, {"indicador": "Publicações", "canal": "WhatsApp", "mes": "Abril", "instituicao": "SENAI", "qtd": 8}, {"indicador": "Publicações", "canal": "WhatsApp", "mes": "Abril", "instituicao": "Sistema Indústria", "qtd": 3}, {"indicador": "Publicações", "canal": "Agência de Notícias", "mes": "Abril", "instituicao": "SESI", "qtd": 0}, {"indicador": "Publicações", "canal": "Agência de Notícias", "mes": "Abril", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Publicações", "canal": "Agência de Notícias", "mes": "Abril", "instituicao": "Sistema Indústria", "qtd": 0}, {"indicador": "Produção", "canal": "Textos", "mes": "Maio", "instituicao": "CNI", "qtd": 10}, {"indicador": "Produção", "canal": "Textos", "mes": "Maio", "instituicao": "IEL", "qtd": 0}, {"indicador": "Produção", "canal": "Textos", "mes": "Maio", "instituicao": "SESI", "qtd": 17}, {"indicador": "Produção", "canal": "Textos", "mes": "Maio", "instituicao": "SENAI", "qtd": 10}, {"indicador": "Produção", "canal": "Textos", "mes": "Maio", "instituicao": "Sistema Indústria", "qtd": 56}, {"indicador": "Produção", "canal": "Criativos", "mes": "Maio", "instituicao": "CNI", "qtd": 3}, {"indicador": "Produção", "canal": "Criativos", "mes": "Maio", "instituicao": "IEL", "qtd": 0}, {"indicador": "Produção", "canal": "Criativos", "mes": "Maio", "instituicao": "SESI", "qtd": 19}, {"indicador": "Produção", "canal": "Criativos", "mes": "Maio", "instituicao": "SENAI", "qtd": 6}, {"indicador": "Produção", "canal": "Criativos", "mes": "Maio", "instituicao": "Sistema Indústria", "qtd": 55}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Maio", "instituicao": "CNI", "qtd": 4}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Maio", "instituicao": "IEL", "qtd": 0}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Maio", "instituicao": "SESI", "qtd": 2}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Maio", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Maio", "instituicao": "Sistema Indústria", "qtd": 12}, {"indicador": "Produção", "canal": "Áudios", "mes": "Maio", "instituicao": "CNI", "qtd": 0}, {"indicador": "Produção", "canal": "Áudios", "mes": "Maio", "instituicao": "IEL", "qtd": 0}, {"indicador": "Produção", "canal": "Áudios", "mes": "Maio", "instituicao": "SESI", "qtd": 0}, {"indicador": "Produção", "canal": "Áudios", "mes": "Maio", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Produção", "canal": "Áudios", "mes": "Maio", "instituicao": "Sistema Indústria", "qtd": 0}, {"indicador": "Produção", "canal": "E-mails", "mes": "Maio", "instituicao": "CNI", "qtd": 0}, {"indicador": "Produção", "canal": "E-mails", "mes": "Maio", "instituicao": "IEL", "qtd": 0}, {"indicador": "Produção", "canal": "E-mails", "mes": "Maio", "instituicao": "SESI", "qtd": 1}, {"indicador": "Produção", "canal": "E-mails", "mes": "Maio", "instituicao": "SENAI", "qtd": 1}, {"indicador": "Produção", "canal": "E-mails", "mes": "Maio", "instituicao": "Sistema Indústria", "qtd": 7}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Maio", "instituicao": "CNI", "qtd": 1}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Maio", "instituicao": "IEL", "qtd": 0}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Maio", "instituicao": "SESI", "qtd": 0}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Maio", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Maio", "instituicao": "Sistema Indústria", "qtd": 6}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Maio", "instituicao": "CNI", "qtd": 1}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Maio", "instituicao": "IEL", "qtd": 0}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Maio", "instituicao": "SESI", "qtd": 3}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Maio", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Maio", "instituicao": "Sistema Indústria", "qtd": 4}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Maio", "instituicao": "CNI", "qtd": 0}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Maio", "instituicao": "IEL", "qtd": 0}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Maio", "instituicao": "SESI", "qtd": 5}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Maio", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Maio", "instituicao": "Sistema Indústria", "qtd": 17}, {"indicador": "Publicações", "canal": "Teams", "mes": "Maio", "instituicao": "CNI", "qtd": 2}, {"indicador": "Publicações", "canal": "Teams", "mes": "Maio", "instituicao": "IEL", "qtd": 0}, {"indicador": "Publicações", "canal": "Teams", "mes": "Maio", "instituicao": "SESI", "qtd": 3}, {"indicador": "Publicações", "canal": "Teams", "mes": "Maio", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Publicações", "canal": "Teams", "mes": "Maio", "instituicao": "Sistema Indústria", "qtd": 13}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Maio", "instituicao": "CNI", "qtd": 13}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Maio", "instituicao": "IEL", "qtd": 0}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Maio", "instituicao": "SESI", "qtd": 6}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Maio", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Maio", "instituicao": "Sistema Indústria", "qtd": 17}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Maio", "instituicao": "CNI", "qtd": 0}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Maio", "instituicao": "IEL", "qtd": 0}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Maio", "instituicao": "SESI", "qtd": 1}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Maio", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Maio", "instituicao": "Sistema Indústria", "qtd": 8}, {"indicador": "Publicações", "canal": "WhatsApp", "mes": "Maio", "instituicao": "SESI", "qtd": 6}, {"indicador": "Publicações", "canal": "WhatsApp", "mes": "Maio", "instituicao": "SENAI", "qtd": 10}, {"indicador": "Publicações", "canal": "WhatsApp", "mes": "Maio", "instituicao": "Sistema Indústria", "qtd": 9}, {"indicador": "Publicações", "canal": "Agência de Notícias", "mes": "Maio", "instituicao": "SESI", "qtd": 0}, {"indicador": "Publicações", "canal": "Agência de Notícias", "mes": "Maio", "instituicao": "SENAI", "qtd": 1}, {"indicador": "Publicações", "canal": "Agência de Notícias", "mes": "Maio", "instituicao": "Sistema Indústria", "qtd": 0}, {"indicador": "Produção", "canal": "Textos", "mes": "Junho", "instituicao": "CNI", "qtd": 4}, {"indicador": "Produção", "canal": "Textos", "mes": "Junho", "instituicao": "IEL", "qtd": 0}, {"indicador": "Produção", "canal": "Textos", "mes": "Junho", "instituicao": "SESI", "qtd": 18}, {"indicador": "Produção", "canal": "Textos", "mes": "Junho", "instituicao": "SENAI", "qtd": 10}, {"indicador": "Produção", "canal": "Textos", "mes": "Junho", "instituicao": "Sistema Indústria", "qtd": 91}, {"indicador": "Produção", "canal": "Criativos", "mes": "Junho", "instituicao": "CNI", "qtd": 2}, {"indicador": "Produção", "canal": "Criativos", "mes": "Junho", "instituicao": "IEL", "qtd": 0}, {"indicador": "Produção", "canal": "Criativos", "mes": "Junho", "instituicao": "SESI", "qtd": 6}, {"indicador": "Produção", "canal": "Criativos", "mes": "Junho", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Produção", "canal": "Criativos", "mes": "Junho", "instituicao": "Sistema Indústria", "qtd": 80}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Junho", "instituicao": "CNI", "qtd": 1}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Junho", "instituicao": "IEL", "qtd": 0}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Junho", "instituicao": "SESI", "qtd": 3}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Junho", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Junho", "instituicao": "Sistema Indústria", "qtd": 16}, {"indicador": "Produção", "canal": "Áudios", "mes": "Junho", "instituicao": "CNI", "qtd": 0}, {"indicador": "Produção", "canal": "Áudios", "mes": "Junho", "instituicao": "IEL", "qtd": 0}, {"indicador": "Produção", "canal": "Áudios", "mes": "Junho", "instituicao": "SESI", "qtd": 0}, {"indicador": "Produção", "canal": "Áudios", "mes": "Junho", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Produção", "canal": "Áudios", "mes": "Junho", "instituicao": "Sistema Indústria", "qtd": 0}, {"indicador": "Produção", "canal": "E-mails", "mes": "Junho", "instituicao": "CNI", "qtd": 0}, {"indicador": "Produção", "canal": "E-mails", "mes": "Junho", "instituicao": "IEL", "qtd": 0}, {"indicador": "Produção", "canal": "E-mails", "mes": "Junho", "instituicao": "SESI", "qtd": 1}, {"indicador": "Produção", "canal": "E-mails", "mes": "Junho", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Produção", "canal": "E-mails", "mes": "Junho", "instituicao": "Sistema Indústria", "qtd": 15}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Junho", "instituicao": "CNI", "qtd": 0}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Junho", "instituicao": "IEL", "qtd": 0}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Junho", "instituicao": "SESI", "qtd": 0}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Junho", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Junho", "instituicao": "Sistema Indústria", "qtd": 1}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Junho", "instituicao": "CNI", "qtd": 0}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Junho", "instituicao": "IEL", "qtd": 0}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Junho", "instituicao": "SESI", "qtd": 1}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Junho", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Junho", "instituicao": "Sistema Indústria", "qtd": 5}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Junho", "instituicao": "CNI", "qtd": 0}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Junho", "instituicao": "IEL", "qtd": 0}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Junho", "instituicao": "SESI", "qtd": 3}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Junho", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Junho", "instituicao": "Sistema Indústria", "qtd": 19}, {"indicador": "Publicações", "canal": "Teams", "mes": "Junho", "instituicao": "CNI", "qtd": 1}, {"indicador": "Publicações", "canal": "Teams", "mes": "Junho", "instituicao": "IEL", "qtd": 0}, {"indicador": "Publicações", "canal": "Teams", "mes": "Junho", "instituicao": "SESI", "qtd": 5}, {"indicador": "Publicações", "canal": "Teams", "mes": "Junho", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Publicações", "canal": "Teams", "mes": "Junho", "instituicao": "Sistema Indústria", "qtd": 35}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Junho", "instituicao": "CNI", "qtd": 4}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Junho", "instituicao": "IEL", "qtd": 0}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Junho", "instituicao": "SESI", "qtd": 14}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Junho", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Junho", "instituicao": "Sistema Indústria", "qtd": 20}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Junho", "instituicao": "CNI", "qtd": 0}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Junho", "instituicao": "IEL", "qtd": 0}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Junho", "instituicao": "SESI", "qtd": 0}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Junho", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Junho", "instituicao": "Sistema Indústria", "qtd": 0}, {"indicador": "Publicações", "canal": "WhatsApp", "mes": "Junho", "instituicao": "SESI", "qtd": 10}, {"indicador": "Publicações", "canal": "WhatsApp", "mes": "Junho", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Publicações", "canal": "WhatsApp", "mes": "Junho", "instituicao": "Sistema Indústria", "qtd": 0}, {"indicador": "Publicações", "canal": "Agência de Notícias", "mes": "Junho", "instituicao": "SESI", "qtd": 0}, {"indicador": "Publicações", "canal": "Agência de Notícias", "mes": "Junho", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Publicações", "canal": "Agência de Notícias", "mes": "Junho", "instituicao": "Sistema Indústria", "qtd": 0}, {"indicador": "Produção", "canal": "Textos", "mes": "Julho", "instituicao": "CNI", "qtd": 4}, {"indicador": "Produção", "canal": "Textos", "mes": "Julho", "instituicao": "IEL", "qtd": 0}, {"indicador": "Produção", "canal": "Textos", "mes": "Julho", "instituicao": "SESI", "qtd": 28}, {"indicador": "Produção", "canal": "Textos", "mes": "Julho", "instituicao": "SENAI", "qtd": 17}, {"indicador": "Produção", "canal": "Textos", "mes": "Julho", "instituicao": "Sistema Indústria", "qtd": 99}, {"indicador": "Produção", "canal": "Criativos", "mes": "Julho", "instituicao": "CNI", "qtd": 1}, {"indicador": "Produção", "canal": "Criativos", "mes": "Julho", "instituicao": "IEL", "qtd": 3}, {"indicador": "Produção", "canal": "Criativos", "mes": "Julho", "instituicao": "SESI", "qtd": 23}, {"indicador": "Produção", "canal": "Criativos", "mes": "Julho", "instituicao": "SENAI", "qtd": 9}, {"indicador": "Produção", "canal": "Criativos", "mes": "Julho", "instituicao": "Sistema Indústria", "qtd": 187}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Julho", "instituicao": "CNI", "qtd": 5}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Julho", "instituicao": "IEL", "qtd": 0}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Julho", "instituicao": "SESI", "qtd": 3}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Julho", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Julho", "instituicao": "Sistema Indústria", "qtd": 4}, {"indicador": "Produção", "canal": "Áudios", "mes": "Julho", "instituicao": "CNI", "qtd": 0}, {"indicador": "Produção", "canal": "Áudios", "mes": "Julho", "instituicao": "IEL", "qtd": 0}, {"indicador": "Produção", "canal": "Áudios", "mes": "Julho", "instituicao": "SESI", "qtd": 0}, {"indicador": "Produção", "canal": "Áudios", "mes": "Julho", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Produção", "canal": "Áudios", "mes": "Julho", "instituicao": "Sistema Indústria", "qtd": 0}, {"indicador": "Produção", "canal": "E-mails", "mes": "Julho", "instituicao": "CNI", "qtd": 1}, {"indicador": "Produção", "canal": "E-mails", "mes": "Julho", "instituicao": "IEL", "qtd": 0}, {"indicador": "Produção", "canal": "E-mails", "mes": "Julho", "instituicao": "SESI", "qtd": 7}, {"indicador": "Produção", "canal": "E-mails", "mes": "Julho", "instituicao": "SENAI", "qtd": 6}, {"indicador": "Produção", "canal": "E-mails", "mes": "Julho", "instituicao": "Sistema Indústria", "qtd": 7}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Julho", "instituicao": "CNI", "qtd": 0}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Julho", "instituicao": "IEL", "qtd": 0}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Julho", "instituicao": "SESI", "qtd": 3}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Julho", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Julho", "instituicao": "Sistema Indústria", "qtd": 3}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Julho", "instituicao": "CNI", "qtd": 1}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Julho", "instituicao": "IEL", "qtd": 0}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Julho", "instituicao": "SESI", "qtd": 1}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Julho", "instituicao": "SENAI", "qtd": 2}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Julho", "instituicao": "Sistema Indústria", "qtd": 5}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Julho", "instituicao": "CNI", "qtd": 1}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Julho", "instituicao": "IEL", "qtd": 0}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Julho", "instituicao": "SESI", "qtd": 9}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Julho", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Julho", "instituicao": "Sistema Indústria", "qtd": 7}, {"indicador": "Publicações", "canal": "Teams", "mes": "Julho", "instituicao": "CNI", "qtd": 0}, {"indicador": "Publicações", "canal": "Teams", "mes": "Julho", "instituicao": "IEL", "qtd": 0}, {"indicador": "Publicações", "canal": "Teams", "mes": "Julho", "instituicao": "SESI", "qtd": 8}, {"indicador": "Publicações", "canal": "Teams", "mes": "Julho", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Publicações", "canal": "Teams", "mes": "Julho", "instituicao": "Sistema Indústria", "qtd": 10}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Julho", "instituicao": "CNI", "qtd": 3}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Julho", "instituicao": "IEL", "qtd": 0}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Julho", "instituicao": "SESI", "qtd": 16}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Julho", "instituicao": "SENAI", "qtd": 3}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Julho", "instituicao": "Sistema Indústria", "qtd": 15}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Julho", "instituicao": "CNI", "qtd": 1}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Julho", "instituicao": "IEL", "qtd": 0}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Julho", "instituicao": "SESI", "qtd": 1}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Julho", "instituicao": "SENAI", "qtd": 6}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Julho", "instituicao": "Sistema Indústria", "qtd": 17}, {"indicador": "Publicações", "canal": "WhatsApp", "mes": "Julho", "instituicao": "SESI", "qtd": 10}, {"indicador": "Publicações", "canal": "WhatsApp", "mes": "Julho", "instituicao": "SENAI", "qtd": 9}, {"indicador": "Publicações", "canal": "WhatsApp", "mes": "Julho", "instituicao": "Sistema Indústria", "qtd": 3}, {"indicador": "Publicações", "canal": "Agência de Notícias", "mes": "Julho", "instituicao": "SESI", "qtd": 0}, {"indicador": "Publicações", "canal": "Agência de Notícias", "mes": "Julho", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Publicações", "canal": "Agência de Notícias", "mes": "Julho", "instituicao": "Sistema Indústria", "qtd": 0}, {"indicador": "Produção", "canal": "Textos", "mes": "Agosto", "instituicao": "CNI", "qtd": 32}, {"indicador": "Produção", "canal": "Textos", "mes": "Agosto", "instituicao": "IEL", "qtd": 1}, {"indicador": "Produção", "canal": "Textos", "mes": "Agosto", "instituicao": "SESI", "qtd": 42}, {"indicador": "Produção", "canal": "Textos", "mes": "Agosto", "instituicao": "SENAI", "qtd": 15}, {"indicador": "Produção", "canal": "Textos", "mes": "Agosto", "instituicao": "Sistema Indústria", "qtd": 72}, {"indicador": "Produção", "canal": "Criativos", "mes": "Agosto", "instituicao": "CNI", "qtd": 16}, {"indicador": "Produção", "canal": "Criativos", "mes": "Agosto", "instituicao": "IEL", "qtd": 3}, {"indicador": "Produção", "canal": "Criativos", "mes": "Agosto", "instituicao": "SESI", "qtd": 50}, {"indicador": "Produção", "canal": "Criativos", "mes": "Agosto", "instituicao": "SENAI", "qtd": 7}, {"indicador": "Produção", "canal": "Criativos", "mes": "Agosto", "instituicao": "Sistema Indústria", "qtd": 71}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Agosto", "instituicao": "CNI", "qtd": 12}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Agosto", "instituicao": "IEL", "qtd": 1}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Agosto", "instituicao": "SESI", "qtd": 13}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Agosto", "instituicao": "SENAI", "qtd": 3}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Agosto", "instituicao": "Sistema Indústria", "qtd": 110}, {"indicador": "Produção", "canal": "Áudios", "mes": "Agosto", "instituicao": "CNI", "qtd": 0}, {"indicador": "Produção", "canal": "Áudios", "mes": "Agosto", "instituicao": "IEL", "qtd": 0}, {"indicador": "Produção", "canal": "Áudios", "mes": "Agosto", "instituicao": "SESI", "qtd": 0}, {"indicador": "Produção", "canal": "Áudios", "mes": "Agosto", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Produção", "canal": "Áudios", "mes": "Agosto", "instituicao": "Sistema Indústria", "qtd": 0}, {"indicador": "Produção", "canal": "E-mails", "mes": "Agosto", "instituicao": "CNI", "qtd": 1}, {"indicador": "Produção", "canal": "E-mails", "mes": "Agosto", "instituicao": "IEL", "qtd": 0}, {"indicador": "Produção", "canal": "E-mails", "mes": "Agosto", "instituicao": "SESI", "qtd": 6}, {"indicador": "Produção", "canal": "E-mails", "mes": "Agosto", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Produção", "canal": "E-mails", "mes": "Agosto", "instituicao": "Sistema Indústria", "qtd": 8}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Agosto", "instituicao": "CNI", "qtd": 1}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Agosto", "instituicao": "IEL", "qtd": 0}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Agosto", "instituicao": "SESI", "qtd": 0}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Agosto", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Agosto", "instituicao": "Sistema Indústria", "qtd": 3}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Agosto", "instituicao": "CNI", "qtd": 1}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Agosto", "instituicao": "IEL", "qtd": 1}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Agosto", "instituicao": "SESI", "qtd": 4}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Agosto", "instituicao": "SENAI", "qtd": 1}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Agosto", "instituicao": "Sistema Indústria", "qtd": 7}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Agosto", "instituicao": "CNI", "qtd": 3}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Agosto", "instituicao": "IEL", "qtd": 0}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Agosto", "instituicao": "SESI", "qtd": 3}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Agosto", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Agosto", "instituicao": "Sistema Indústria", "qtd": 7}, {"indicador": "Publicações", "canal": "Teams", "mes": "Agosto", "instituicao": "CNI", "qtd": 3}, {"indicador": "Publicações", "canal": "Teams", "mes": "Agosto", "instituicao": "IEL", "qtd": 0}, {"indicador": "Publicações", "canal": "Teams", "mes": "Agosto", "instituicao": "SESI", "qtd": 3}, {"indicador": "Publicações", "canal": "Teams", "mes": "Agosto", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Publicações", "canal": "Teams", "mes": "Agosto", "instituicao": "Sistema Indústria", "qtd": 8}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Agosto", "instituicao": "CNI", "qtd": 28}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Agosto", "instituicao": "IEL", "qtd": 0}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Agosto", "instituicao": "SESI", "qtd": 4}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Agosto", "instituicao": "SENAI", "qtd": 1}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Agosto", "instituicao": "Sistema Indústria", "qtd": 16}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Agosto", "instituicao": "CNI", "qtd": 3}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Agosto", "instituicao": "IEL", "qtd": 0}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Agosto", "instituicao": "SESI", "qtd": 0}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Agosto", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Agosto", "instituicao": "Sistema Indústria", "qtd": 12}, {"indicador": "Publicações", "canal": "WhatsApp", "mes": "Agosto", "instituicao": "SESI", "qtd": 6}, {"indicador": "Publicações", "canal": "WhatsApp", "mes": "Agosto", "instituicao": "SENAI", "qtd": 10}, {"indicador": "Publicações", "canal": "WhatsApp", "mes": "Agosto", "instituicao": "Sistema Indústria", "qtd": 9}, {"indicador": "Publicações", "canal": "WhatsApp", "mes": "Agosto", "instituicao": "IEL", "qtd": 1}, {"indicador": "Publicações", "canal": "Agência de Notícias", "mes": "Agosto", "instituicao": "SESI", "qtd": 0}, {"indicador": "Publicações", "canal": "Agência de Notícias", "mes": "Agosto", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Publicações", "canal": "Agência de Notícias", "mes": "Agosto", "instituicao": "Sistema Indústria", "qtd": 0}, {"indicador": "Produção", "canal": "Textos", "mes": "Setembro", "instituicao": "CNI", "qtd": 29}, {"indicador": "Produção", "canal": "Textos", "mes": "Setembro", "instituicao": "IEL", "qtd": 1}, {"indicador": "Produção", "canal": "Textos", "mes": "Setembro", "instituicao": "SESI", "qtd": 22}, {"indicador": "Produção", "canal": "Textos", "mes": "Setembro", "instituicao": "SENAI", "qtd": 12}, {"indicador": "Produção", "canal": "Textos", "mes": "Setembro", "instituicao": "Sistema Indústria", "qtd": 49}, {"indicador": "Produção", "canal": "Criativos", "mes": "Setembro", "instituicao": "CNI", "qtd": 11}, {"indicador": "Produção", "canal": "Criativos", "mes": "Setembro", "instituicao": "IEL", "qtd": 0}, {"indicador": "Produção", "canal": "Criativos", "mes": "Setembro", "instituicao": "SESI", "qtd": 30}, {"indicador": "Produção", "canal": "Criativos", "mes": "Setembro", "instituicao": "SENAI", "qtd": 16}, {"indicador": "Produção", "canal": "Criativos", "mes": "Setembro", "instituicao": "Sistema Indústria", "qtd": 33}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Setembro", "instituicao": "CNI", "qtd": 6}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Setembro", "instituicao": "IEL", "qtd": 0}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Setembro", "instituicao": "SESI", "qtd": 6}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Setembro", "instituicao": "SENAI", "qtd": 6}, {"indicador": "Produção", "canal": "Vídeos", "mes": "Setembro", "instituicao": "Sistema Indústria", "qtd": 9}, {"indicador": "Produção", "canal": "Áudios", "mes": "Setembro", "instituicao": "CNI", "qtd": 0}, {"indicador": "Produção", "canal": "Áudios", "mes": "Setembro", "instituicao": "IEL", "qtd": 0}, {"indicador": "Produção", "canal": "Áudios", "mes": "Setembro", "instituicao": "SESI", "qtd": 0}, {"indicador": "Produção", "canal": "Áudios", "mes": "Setembro", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Produção", "canal": "Áudios", "mes": "Setembro", "instituicao": "Sistema Indústria", "qtd": 0}, {"indicador": "Produção", "canal": "E-mails", "mes": "Setembro", "instituicao": "CNI", "qtd": 3}, {"indicador": "Produção", "canal": "E-mails", "mes": "Setembro", "instituicao": "IEL", "qtd": 0}, {"indicador": "Produção", "canal": "E-mails", "mes": "Setembro", "instituicao": "SESI", "qtd": 9}, {"indicador": "Produção", "canal": "E-mails", "mes": "Setembro", "instituicao": "SENAI", "qtd": 5}, {"indicador": "Produção", "canal": "E-mails", "mes": "Setembro", "instituicao": "Sistema Indústria", "qtd": 7}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Setembro", "instituicao": "CNI", "qtd": 1}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Setembro", "instituicao": "IEL", "qtd": 0}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Setembro", "instituicao": "SESI", "qtd": 0}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Setembro", "instituicao": "SENAI", "qtd": 1}, {"indicador": "Estratégia", "canal": "Relatórios", "mes": "Setembro", "instituicao": "Sistema Indústria", "qtd": 4}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Setembro", "instituicao": "CNI", "qtd": 1}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Setembro", "instituicao": "IEL", "qtd": 1}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Setembro", "instituicao": "SESI", "qtd": 2}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Setembro", "instituicao": "SENAI", "qtd": 3}, {"indicador": "Estratégia", "canal": "Planejamento de ações", "mes": "Setembro", "instituicao": "Sistema Indústria", "qtd": 3}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Setembro", "instituicao": "CNI", "qtd": 1}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Agosto", "instituicao": "IEL", "qtd": 0}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Setembro", "instituicao": "SESI", "qtd": 4}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Setembro", "instituicao": "SENAI", "qtd": 2}, {"indicador": "Publicações", "canal": "Intranet", "mes": "Setembro", "instituicao": "Sistema Indústria", "qtd": 9}, {"indicador": "Publicações", "canal": "Teams", "mes": "Setembro", "instituicao": "CNI", "qtd": 3}, {"indicador": "Publicações", "canal": "Teams", "mes": "Setembro", "instituicao": "IEL", "qtd": 0}, {"indicador": "Publicações", "canal": "Teams", "mes": "Setembro", "instituicao": "SESI", "qtd": 4}, {"indicador": "Publicações", "canal": "Teams", "mes": "Setembro", "instituicao": "SENAI", "qtd": 1}, {"indicador": "Publicações", "canal": "Teams", "mes": "Setembro", "instituicao": "Sistema Indústria", "qtd": 9}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Setembro", "instituicao": "CNI", "qtd": 13}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Setembro", "instituicao": "IEL", "qtd": 0}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Setembro", "instituicao": "SESI", "qtd": 5}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Setembro", "instituicao": "SENAI", "qtd": 6}, {"indicador": "Publicações", "canal": "TVs Corporativas", "mes": "Setembro", "instituicao": "Sistema Indústria", "qtd": 17}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Setembro", "instituicao": "CNI", "qtd": 1}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Setembro", "instituicao": "IEL", "qtd": 0}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Setembro", "instituicao": "SESI", "qtd": 0}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Setembro", "instituicao": "SENAI", "qtd": 0}, {"indicador": "Publicações", "canal": "E-mails", "mes": "Setembro", "instituicao": "Sistema Indústria", "qtd": 8}, {"indicador": "Publicações", "canal": "WhatsApp", "mes": "Setembro", "instituicao": "SESI", "qtd": 8}, {"indicador": "Publicações", "canal": "WhatsApp", "mes": "Setembro", "instituicao": "SENAI", "qtd": 14}, {"indicador": "Publicações", "canal": "WhatsApp", "mes": "Setembro", "instituicao": "Sistema Indústria", "qtd": 2}, {"indicador": "Publicações", "canal": "WhatsApp", "mes": "Setembro", "instituicao": "IEL", "qtd": 1}, {"indicador": "Publicações", "canal": "Agência de Notícias", "mes": "Setembro", "instituicao": "SESI", "qtd": 0}, {"indicador": "Publicações", "canal": "Agência de Notícias", "mes": "Setembro", "instituicao": "SENAI", "qtd": 1}, {"indicador": "Publicações", "canal": "Agência de Notícias", "mes": "Setembro", "instituicao": "Sistema Indústria", "qtd": 0}];
+
+const PROJECTS = [
+  "Campanha interna do Custo Brasil",
+  "Embaixadores do SI",
+  "Diagnóstico de Endomarketing - Federações"
+];
+
+const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro"];
+const MESES_ABREV = {Janeiro:"Jan",Fevereiro:"Fev",Março:"Mar",Abril:"Abr",Maio:"Mai",Junho:"Jun",Julho:"Jul",Agosto:"Ago",Setembro:"Set"};
+const INSTITUICOES = ["CNI","SESI","SENAI","IEL","Sistema Indústria"];
+const INST_COLOR = {
+  "CNI":"#F2A93B","SESI":"#35C4B0","SENAI":"#E8604C","IEL":"#9086EA","Sistema Indústria":"#4C8DF2"
+};
+const IND_COLOR = {"Produção":"#F2A93B","Estratégia":"#9086EA","Publicações":"#35C4B0"};
+
+let state = {
+  instituicoes: new Set(INSTITUICOES),
+  meses: new Set(MESES)
+};
+
+/* ---------------- FILTER WIRES ---------------- */
+document.querySelectorAll('.chip[data-inst]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const v = btn.dataset.inst;
+    if(state.instituicoes.has(v)){
+      if(state.instituicoes.size>1){ state.instituicoes.delete(v); btn.classList.remove('active'); }
+    } else { state.instituicoes.add(v); btn.classList.add('active'); }
+    render();
+  });
+});
+document.querySelectorAll('.chip[data-mes]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const v = btn.dataset.mes;
+    if(state.meses.has(v)){
+      if(state.meses.size>1){ state.meses.delete(v); btn.classList.remove('active'); }
+    } else { state.meses.add(v); btn.classList.add('active'); }
+    render();
+  });
+});
+
+/* ---------------- HELPERS ---------------- */
+function filtered(){
+  return RAW.filter(r => state.instituicoes.has(r.instituicao) && state.meses.has(r.mes));
+}
+function fmt(n){ return n.toLocaleString('pt-BR'); }
+
+/* ---------------- TIMELINE (recorte de tempo interativo) ---------------- */
+function monthIndexRangeFromState(){
+  const idxs = MESES.map((m,i)=> state.meses.has(m) ? i : null).filter(i=>i!==null);
+  if(idxs.length===0) return [0, MESES.length-1];
+  return [Math.min(...idxs), Math.max(...idxs)];
+}
+function timelineTotalsByMonth(){
+  // Mostra sempre os 6 meses (contexto completo), respeitando apenas o filtro de instituição
+  return MESES.map(m =>
+    RAW.filter(r => state.instituicoes.has(r.instituicao) && r.mes===m).reduce((s,r)=>s+r.qtd,0)
+  );
+}
+function applyMonthRange(startIdx, endIdx){
+  state.meses = new Set(MESES.slice(startIdx, endIdx+1));
+  document.querySelectorAll('.chip[data-mes]').forEach(btn=>{
+    const idx = MESES.indexOf(btn.dataset.mes);
+    btn.classList.toggle('active', idx>=startIdx && idx<=endIdx);
+  });
+  render();
+}
+function updateTimelineLabel(){
+  const [s,e] = monthIndexRangeFromState();
+  const label = s===0 && e===MESES.length-1
+    ? `${MESES_ABREV[MESES[0]].toUpperCase()} — ${MESES_ABREV[MESES[MESES.length-1]].toUpperCase()} · PERÍODO COMPLETO`
+    : `${MESES_ABREV[MESES[s]].toUpperCase()} — ${MESES_ABREV[MESES[e]].toUpperCase()} · RECORTE SELECIONADO`;
+  document.getElementById('timelineRangeLabel').textContent = label;
+}
+
+const brushOverlayPlugin = {
+  id:'brushOverlay',
+  afterDatasetsDraw(chart){
+    const range = tempBrushRange || monthIndexRangeFromState();
+    if(!range) return;
+    const [startIdx, endIdx] = range;
+    const {ctx, chartArea, scales} = chart;
+    const xScale = scales.x;
+    const stepPx = MESES.length>1 ? (xScale.getPixelForValue(1) - xScale.getPixelForValue(0)) : 40;
+    const xStart = xScale.getPixelForValue(startIdx) - stepPx/2;
+    const xEnd = xScale.getPixelForValue(endIdx) + stepPx/2;
+    ctx.save();
+    ctx.fillStyle = 'rgba(242,169,59,0.10)';
+    ctx.fillRect(xStart, chartArea.top, xEnd-xStart, chartArea.bottom-chartArea.top);
+    ctx.strokeStyle = 'rgba(242,169,59,0.85)';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(xStart, chartArea.top); ctx.lineTo(xStart, chartArea.bottom); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(xEnd, chartArea.top); ctx.lineTo(xEnd, chartArea.bottom); ctx.stroke();
+    ctx.restore();
+  }
+};
+
+function initTimeline(){
+  const canvas = document.getElementById('chartTimeline');
+  chartTimeline = new Chart(canvas, {
+    type:'line',
+    data:{
+      labels: MESES.map(m=>MESES_ABREV[m]),
+      datasets:[{
+        label:'Volume total',
+        data: timelineTotalsByMonth(),
+        borderColor:'#F2A93B',
+        backgroundColor:'rgba(242,169,59,0.14)',
+        fill:true,
+        tension:0.35,
+        borderWidth:2.5,
+        pointRadius:4,
+        pointBackgroundColor:'#F2A93B',
+        pointHoverRadius:6
+      }]
+    },
+    options:{
+      responsive:true,
+      animation:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:(ctx)=> `${fmt(ctx.parsed.y)} itens` } } },
+      scales:{
+        x:{ grid:{display:false}, ticks:{color:'#7C8AA3', font:{size:11.5}} },
+        y:{ grid:{color:'rgba(255,255,255,0.06)'}, ticks:{color:'#7C8AA3', font:{size:11}}, beginAtZero:true }
+      }
+    },
+    plugins:[brushOverlayPlugin]
+  });
+
+  function indexFromEvent(e){
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const x = clientX - rect.left;
+    const val = chartTimeline.scales.x.getValueForPixel(x);
+    return Math.max(0, Math.min(MESES.length-1, Math.round(val)));
+  }
+
+  let dragging = false, anchorIdx = null;
+
+  canvas.addEventListener('pointerdown', e=>{
+    dragging = true;
+    anchorIdx = indexFromEvent(e);
+    tempBrushRange = [anchorIdx, anchorIdx];
+    canvas.setPointerCapture(e.pointerId);
+    chartTimeline.update('none');
+  });
+  canvas.addEventListener('pointermove', e=>{
+    if(!dragging) return;
+    const idx = indexFromEvent(e);
+    tempBrushRange = [Math.min(anchorIdx, idx), Math.max(anchorIdx, idx)];
+    chartTimeline.update('none');
+  });
+  function commit(e){
+    if(!dragging) return;
+    dragging = false;
+    if(tempBrushRange){
+      const [s,en] = tempBrushRange;
+      tempBrushRange = null;
+      applyMonthRange(s, en);
+    }
+  }
+  canvas.addEventListener('pointerup', commit);
+  canvas.addEventListener('pointercancel', commit);
+
+  document.getElementById('btnResetTimeline').addEventListener('click', ()=>{
+    applyMonthRange(0, MESES.length-1);
+  });
+}
+function updateTimelineChart(){
+  if(!chartTimeline) return;
+  chartTimeline.data.datasets[0].data = timelineTotalsByMonth();
+  chartTimeline.update('none');
+  updateTimelineLabel();
+}
+
+
+/* ---------------- CHART INSTANCES ---------------- */
+let chartEvol, chartDonut, chartProducao, chartEstrategia, chartTimeline;
+let tempBrushRange = null;
+
+const fontFamily = "'Inter', sans-serif";
+Chart.defaults.color = '#AEB8CC';
+Chart.defaults.font.family = fontFamily;
+Chart.defaults.borderColor = 'rgba(255,255,255,0.08)';
+
+function baseGridOpts(){
+  return {
+    x:{ grid:{display:false}, ticks:{color:'#7C8AA3', font:{size:11}} },
+    y:{ grid:{color:'rgba(255,255,255,0.06)'}, ticks:{color:'#7C8AA3', font:{size:11}}, beginAtZero:true }
+  };
+}
+
+function render(){
+  const data = filtered();
+  updateTimelineChart();
+  renderKPIs(data);
+  renderEqualizer(data);
+  renderEvol(data);
+  renderDonut(data);
+  renderProducao(data);
+  renderEstrategia(data);
+  renderProjects();
+  document.getElementById('footRange').textContent =
+    `${state.meses.size} mês(es) · ${state.instituicoes.size} instituição(ões) selecionada(s)`;
+}
+
+/* ---------------- KPIs ---------------- */
+function renderKPIs(data){
+  const total = data.reduce((s,r)=>s+r.qtd,0);
+  const producao = data.filter(r=>r.indicador==='Produção').reduce((s,r)=>s+r.qtd,0);
+  const publicacoes = data.filter(r=>r.indicador==='Publicações').reduce((s,r)=>s+r.qtd,0);
+  const estrategia = data.filter(r=>r.indicador==='Estratégia').reduce((s,r)=>s+r.qtd,0);
+
+  // canal mais ativo — apenas dentro da frente de Publicações
+  const byCanalPublicacoes = {};
+  data.filter(r=>r.indicador==='Publicações').forEach(r=>{
+    byCanalPublicacoes[r.canal] = (byCanalPublicacoes[r.canal]||0) + r.qtd;
+  });
+  let topCanal = '—', topVal = -1;
+  Object.entries(byCanalPublicacoes).forEach(([k,v])=>{ if(v>topVal){topVal=v; topCanal=k;} });
+
+  document.getElementById('kpiHero').innerHTML = `
+    <div>
+      <div class="kpi-hero-label">Volume Total</div>
+      <div class="kpi-hero-value">${fmt(total)}</div>
+    </div>
+    <div class="kpi-hero-unit">itens registrados no período selecionado</div>
+  `;
+
+  const kpis = [
+    {label:'Produção', value: fmt(producao), unit:`${total? Math.round(producao/total*100):0}% do total`, accent:'var(--amber)'},
+    {label:'Publicações', value: fmt(publicacoes), unit:`${total? Math.round(publicacoes/total*100):0}% do total`, accent:'var(--teal)'},
+    {label:'Estratégia', value: fmt(estrategia), unit:`${total? Math.round(estrategia/total*100):0}% do total`, accent:'var(--violet)'},
+    {label:'Canal Mais Ativo em Publicações', value: topCanal, unit:`${fmt(topVal)} itens`, accent:'var(--teal)', text:true},
+  ];
+
+  document.getElementById('kpiRow').innerHTML = kpis.map(k=>`
+    <div class="kpi" style="--accent:${k.accent}">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value${k.text?' kpi-value--text':''}">${k.value}<span>${k.unit}</span></div>
+    </div>
+  `).join('');
+}
+
+/* ---------------- EQUALIZER ---------------- */
+// Cada frente (indicador) tem seu próprio conjunto fixo de canais possíveis —
+// nunca são somados entre frentes diferentes, mesmo quando o nome do canal se repete
+// (ex.: "E-mails" existe tanto em Produção quanto em Publicações, mas são coisas distintas).
+const INDICADORES_ORDEM = ['Produção','Estratégia','Publicações'];
+const CANAIS_POR_INDICADOR = {
+  'Produção': ['Textos','Criativos','Vídeos','Áudios','E-mails'],
+  'Estratégia': ['Relatórios','Planejamento de ações'],
+  'Publicações': ['Intranet','Teams','TVs Corporativas','E-mails','WhatsApp','Agência de Notícias']
+};
+
+function renderEqualizer(data){
+  const wrap = document.getElementById('eqWrap');
+
+  wrap.innerHTML = INDICADORES_ORDEM.map(indicador=>{
+    const canais = CANAIS_POR_INDICADOR[indicador];
+    const vals = canais.map(canal =>
+      data.filter(r=>r.indicador===indicador && r.canal===canal).reduce((s,r)=>s+r.qtd,0)
+    );
+    const groupTotal = vals.reduce((s,v)=>s+v,0);
+    const max = Math.max(1, ...vals);
+    const color = IND_COLOR[indicador];
+
+    const bars = canais.map((canal,idx)=>{
+      const val = vals[idx];
+      const h = Math.max(4, Math.round((val/max)*150));
+      return `
+        <div class="eq-bar-col" title="${indicador} · ${canal}: ${fmt(val)}">
+          <div class="eq-val">${fmt(val)}</div>
+          <div class="eq-bar" style="height:${h}px; background:${color}; box-shadow:0 0 12px -4px ${color}77;"></div>
+          <div class="eq-label">${canal}</div>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="eq-group">
+        <div class="eq-group-head">
+          <span class="eq-group-dot" style="background:${color}"></span>
+          <span class="eq-group-title">${indicador}</span>
+          <span class="eq-group-total">${fmt(groupTotal)}</span>
+        </div>
+        <div class="eq-bars">${bars}</div>
+      </div>`;
+  }).join('');
+}
+
+/* ---------------- EVOLUÇÃO MENSAL (linha) ---------------- */
+function renderEvol(data){
+  const indicadores = ['Produção','Estratégia','Publicações'];
+  const datasets = indicadores.map(ind=>{
+    const perMes = MESES.map(m => data.filter(r=>r.indicador===ind && r.mes===m).reduce((s,r)=>s+r.qtd,0));
+    return {
+      label: ind,
+      data: perMes,
+      borderColor: IND_COLOR[ind],
+      backgroundColor: IND_COLOR[ind]+'26',
+      fill:true,
+      tension:0.35,
+      pointRadius:3,
+      pointBackgroundColor: IND_COLOR[ind],
+      borderWidth:2.5
+    };
+  });
+
+  const mesesAtivos = MESES.filter(m=>state.meses.has(m));
+  const labels = mesesAtivos.map(m=>MESES_ABREV[m]);
+  datasets.forEach(ds=>{ ds.data = MESES.map((m,i)=> state.meses.has(m) ? ds.data[i] : null).filter((v,i)=>state.meses.has(MESES[i])); });
+
+  if(chartEvol) chartEvol.destroy();
+  chartEvol = new Chart(document.getElementById('chartEvol'), {
+    type:'line',
+    data:{ labels, datasets },
+    options:{
+      responsive:true,
+      interaction:{mode:'index', intersect:false},
+      plugins:{ legend:{position:'top', align:'end', labels:{boxWidth:10, boxHeight:10, usePointStyle:true, padding:16}} },
+      scales: baseGridOpts()
+    }
+  });
+}
+
+/* ---------------- DONUT INSTITUIÇÃO ---------------- */
+function renderDonut(data){
+  const insts = INSTITUICOES.filter(i=>state.instituicoes.has(i));
+  const vals = insts.map(i => data.filter(r=>r.instituicao===i).reduce((s,r)=>s+r.qtd,0));
+
+  if(chartDonut) chartDonut.destroy();
+  chartDonut = new Chart(document.getElementById('chartDonut'), {
+    type:'doughnut',
+    data:{
+      labels: insts,
+      datasets:[{
+        data: vals,
+        backgroundColor: insts.map(i=>INST_COLOR[i]),
+        borderColor: '#0B1220',
+        borderWidth:3,
+        hoverOffset:8
+      }]
+    },
+    options:{
+      responsive:true,
+      cutout:'62%',
+      plugins:{
+        legend:{ position:'bottom', labels:{boxWidth:10, boxHeight:10, usePointStyle:true, padding:14, font:{size:11.5}} }
+      }
+    }
+  });
+}
+
+/* ---------------- PRODUÇÃO POR TIPO (stacked bar) ---------------- */
+function renderProducao(data){
+  const canais = ['Textos','Criativos','Vídeos','Áudios','E-mails'];
+  const colors = ['#F2A93B','#E8604C','#9086EA','#4C8DF2','#35C4B0'];
+  const mesesAtivos = MESES.filter(m=>state.meses.has(m));
+  const labels = mesesAtivos.map(m=>MESES_ABREV[m]);
+
+  const datasets = canais.map((c,idx)=>({
+    label:c,
+    data: mesesAtivos.map(m => data.filter(r=>r.indicador==='Produção' && r.canal===c && r.mes===m).reduce((s,r)=>s+r.qtd,0)),
+    backgroundColor: colors[idx],
+    borderRadius:3,
+    stack:'producao'
+  }));
+
+  if(chartProducao) chartProducao.destroy();
+  chartProducao = new Chart(document.getElementById('chartProducao'), {
+    type:'bar',
+    data:{ labels, datasets },
+    options:{
+      responsive:true,
+      plugins:{ legend:{position:'top', align:'end', labels:{boxWidth:10, boxHeight:10, usePointStyle:true, padding:12, font:{size:10.5}}} },
+      scales:{
+        x:{ stacked:true, grid:{display:false}, ticks:{color:'#7C8AA3'} },
+        y:{ stacked:true, grid:{color:'rgba(255,255,255,0.06)'}, ticks:{color:'#7C8AA3'} }
+      }
+    }
+  });
+}
+
+/* ---------------- ESTRATÉGIA (linha dupla) ---------------- */
+function renderEstrategia(data){
+  const canais = ['Relatórios','Planejamento de ações'];
+  const colors = ['#9086EA','#F2A93B'];
+  const mesesAtivos = MESES.filter(m=>state.meses.has(m));
+  const labels = mesesAtivos.map(m=>MESES_ABREV[m]);
+
+  const datasets = canais.map((c,idx)=>({
+    label:c,
+    data: mesesAtivos.map(m => data.filter(r=>r.indicador==='Estratégia' && r.canal===c && r.mes===m).reduce((s,r)=>s+r.qtd,0)),
+    borderColor: colors[idx],
+    backgroundColor: colors[idx]+'22',
+    tension:0.35,
+    fill:false,
+    borderWidth:2.5,
+    pointRadius:4,
+    pointBackgroundColor: colors[idx]
+  }));
+
+  if(chartEstrategia) chartEstrategia.destroy();
+  chartEstrategia = new Chart(document.getElementById('chartEstrategia'), {
+    type:'line',
+    data:{ labels, datasets },
+    options:{
+      responsive:true,
+      plugins:{ legend:{position:'top', align:'end', labels:{boxWidth:10, boxHeight:10, usePointStyle:true, padding:12, font:{size:10.5}}} },
+      scales: baseGridOpts()
+    }
+  });
+}
+
+/* ---------------- PROJETOS ---------------- */
+function renderProjects(){
+  document.getElementById('projList').innerHTML = PROJECTS.map(p=>`
+    <div class="proj-item">
+      <span class="proj-dot"></span>
+      <span class="proj-text">${p}</span>
+      <span class="proj-tag">Em andamento</span>
+    </div>
+  `).join('');
+}
+
+initTimeline();
+render();
+</script>
+</body>
+</html>
